@@ -1,0 +1,32 @@
+server:
+  port: 8082
+
+
+#日志
+logging:
+  level:
+    com.chinasoft.mapper: debug
+
+#数据库连接池
+spring:
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      username: root
+      password: 123456
+      url: jdbc:mysql:///boot?useUnicode=true&characterEncoding=utf-8&useSSL=true&allowMultiQueries=true
+      stat-view-servlet:
+        enabled: true
+        url-pattern: /druid/*
+        login-username: root
+        login-password: root
+
+# 启动之后要打开的地址
+open:
+  browser:
+    url: http://localhost:8082/index
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+

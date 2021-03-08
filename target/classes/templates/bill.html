@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <title>记账系统</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="../layui/css/layui.css">
+</head>
+<body>
+    <div id="app">
+        <center>
+            <h2>记账管理</h2><br>
+            <div>
+                <label >搜索选择框</label>
+                <select v-model="goodType" >
+                    <option>不限</option>
+                    <option>支出</option>
+                    <option>收入</option>
+                    <option>转账</option>
+                    <option>借出</option>
+                    <option>借入</option>
+                    <option>还入</option>
+                    <option>还出</option>
+                </select>
+                <label >开始时间</label>
+                <input type="date" v-model="beginTime" placeholder="yyyy-MM-dd">
+                <label >结束时间</label>
+                <input type="date" v-model="aendTime" placeholder="yyyy-MM-dd">
+            </div><br><br>
+                <button type="button" class="layui-btn" @click="chaxun()">查询</button>
+                <button type="button" class="layui-btn layui-btn-primary" @click="reset()">重置</button>
+                <button type="button" class="layui-btn layui-btn-warm" @click="insert()">添加</button>
+
+                <table class="layui-table" lay-size="sm" style="width: 1200px;">
+                    <thead>
+                        <tr>
+                            <th lay-data="{field:'id', width:80, sort: true}">ID</th>
+                            <th lay-data="{field:'title', width:80}">标题</th>
+                            <th lay-data="{field:'type'}">类型</th>
+                            <th lay-data="{field:'time', sort: true}">时间</th>
+                            <th lay-data="{field:'price'}">金额</th>
+                            <th lay-data="{field:'explain'}">备注</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(bills,index) in billList">
+                            <td>{{ index+1 }}</td>
+                            <td>{{ bills.title }}</td>
+                            <td>{{bills.type}}</td>
+                            <td>{{bills.billTime|dateformate}}</td>
+                            <td>{{bills.price}}</td>
+                            <td>{{bills.explains}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            <div id="test1"></div>
+        </center>
+
+        <form id="tanchu" @submit.prevent class="layui-form" action="" style="display: none">
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">单选框</label>
+                <div class="layui-input-block">
+                    <input type="radio" name="title1" value="支出" title="支出" checked>
+                    <input type="radio" name="title1" value="收入" title="收入">
+                    <input type="radio" name="title1" value="转账" title="转账">
+                    <input type="radio" name="title1" value="借出" title="借出">
+                    <input type="radio" name="title1" value="借入" title="借入">
+                    <input type="radio" name="title1" value="还入" title="还入">
+                    <input type="radio" name="title1" value="还出" title="还出">
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">标题</label>
+                <div class="layui-input-block">
+                    <input v-model="billTitle" type="text" name="title" required  lay-verify="required" autocomplete="off" placeholder="请输入标题" class="layui-input">
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">日期</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="date" id="date" required  lay-verify="required" placeholder="yyyy-MM-dd" autocomplete="off" class="layui-input">
+                    </div>
+
+                    <label class="layui-form-label">金额</label>
+                    <div class="layui-input-inline">
+                        <input v-model="price" type="number" name="price" required  lay-verify="required" placeholder="请输入" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+            </div>
+
+
+
+            <div class="layui-form-item layui-form-text">
+                <label class="layui-form-label">说明</label>
+                <div class="layui-input-block">
+                    <textarea v-model="textarea" placeholder="请输入内容" class="layui-textarea"></textarea>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button type="button" class="layui-btn" lay-submit lay-filter="formDemo"  @click="submitfrom()">立即提交</button>
+                    <button type="reset"  class="layui-btn layui-btn-primary" @click="reset()">重置</button>
+                    <button type="button" class="layui-btn layui-btn-warm"  @click="returnIndex()">返回</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+</body>
+<script src="../js/jquery.min.js"></script>
+<script src="../layui/layui.js"></script>
+<script src="../js/vue.js"></script>
+<script src="../js/axios.min.js"></script>
+<script src="../js/qs.js"></script>
+<script>
+    layui.use(['form','layer', 'layedit', 'laydate','laypage'], function(){
+        const form = layui.form
+            , layer = layui.layer
+            , layedit = layui.layedit
+            , laydate = layui.laydate
+            , laypage = layui.laypage;
+
+        //日期
+        laydate.render({
+            elem: '#date',
+            type: 'datetime'
+        });
+
+        //创建一个编辑器
+        const editIndex = layedit.build('LAY_demo_editor');
+
+        //自定义验证规则
+        form.verify({
+            title: function(value){
+                if(value.length > 25){
+                    return '标题至多25个字符';
+                }
+            }
+            ,content: function(value){
+                layedit.sync(editIndex);
+            }
+        });
+
+    });
+
+</script>
+<script>
+    const app = new Vue({
+        el: '#app',
+        data: {
+            goodType: '不限',
+            beginTime: '',
+            aendTime: '',
+            billList:[],
+            textarea:'',
+            price:'',
+            billTitle:'',
+            count:1
+            /*lists:[{value:'支出'},{value:'收入'},{value:'转账'},{value:'借出'},{value:'借入'},{value:'还入'},{value:'还入'}],
+            checkedValue:''*/
+        },
+        mounted() {
+            axios.post('/bill',Qs.stringify({"curr": 1 })).then(resp=>{
+                    this.billList=resp.data;
+                    this.count=resp.data.Total
+            });
+
+
+            layui.use(['layer','laypage'], () => {
+                const laypage = layui.laypage;
+                //执行一个laypage实例
+
+                laypage.render({
+                    elem: 'test1' //注意，这里的 test1 是 ID，不用加 # 号
+                    ,count: this.count//数据总数，从服务端得到
+                    ,limit: 10
+                    ,jump: (obj, first)=>{
+                        //obj包含了当前分页的所有参数，比如：
+                        console.log(obj.curr); //得到当前页，以便向服务端请求对应页的数据。
+                        console.log(obj.limit); //得到每页显示的条数
+                        axios.post('/rearch',Qs.stringify({
+                            "goodType": this.goodType,
+                            "beginTime": this.beginTime,
+                            "aendTime": this.aendTime,
+                            "curr": obj.curr})).then(resp => {
+                            this.billList = resp.data.Result;
+                        })
+
+                        //首次不执行
+                        if(!first){
+                            //do something
+
+                        }
+                    }
+                });
+            })
+
+        },
+        methods: {
+
+            chaxun: function () {
+
+                axios.post('/rearch', Qs.stringify({
+                    "goodType": this.goodType,
+                    "beginTime": this.beginTime,
+                    "aendTime": this.aendTime,
+                    "curr":1
+                })).then(res=> {
+                    this.billList = res.data.Result;
+                    this.count=res.data.Total;
+                    layui.use(['layer','laypage'], () => {
+                        const laypage = layui.laypage;
+                        //执行一个laypage实例
+
+                        laypage.render({
+                            elem: 'test1' //注意，这里的 test1 是 ID，不用加 # 号
+                            ,count: this.count//数据总数，从服务端得到
+                            ,limit: 10
+                            ,jump: (obj, first)=>{
+                                //obj包含了当前分页的所有参数，比如：
+                                console.log(obj.curr); //得到当前页，以便向服务端请求对应页的数据。
+                                console.log(obj.limit); //得到每页显示的条数
+                                axios.post('/rearch',Qs.stringify({
+                                    "goodType": this.goodType,
+                                    "beginTime": this.beginTime,
+                                    "aendTime": this.aendTime,
+                                    "curr": obj.curr})).then(resp => {
+                                    this.billList = resp.data.Result;
+                                })
+
+                                //首次不执行
+                                if(!first){
+                                    //do something
+
+                                }
+                            }
+                        });
+                    })
+
+                });
+
+            },
+            reset:function (){
+                this.goodType='不限';
+                this.beginTime='';
+                this.aendTime='';
+                this.billTitle='';
+                this.price='';
+                this.textarea='';
+                $('#date').val("");
+            },
+            insert:function (){
+                this.reset();
+                layui.use(['form','layer', 'layedit', 'laydate'], function() {
+                    const form = layui.form
+                        , layer = layui.layer
+
+                    layer.open({
+                        type: 1
+                        ,area:['800px','500px']
+                        ,offset: 'auto'//具体配置参考：http://www.layui.com/doc/modules/layer.html#offset
+                        ,id: 'layerDemo'//防止重复弹出
+                        ,content: $('#tanchu')
+                        ,shade: 0 //不显示遮罩
+                        ,yes: function(){
+                            layer.closeAll();
+                        }
+                    });
+
+                    //监听提交
+                    form.on('submit(formDemo)', function(data){
+                        return false;
+                    });
+                })
+
+            },
+
+            //提交from表单  新增数据
+            submitfrom:function (){
+                /*alert($("input[name='title1']:checked").val()+"---"+this.billTitle+"---"+$('#date').val()+"----"+this.price+"---"+this.textarea)*/
+                axios.post('/toIn',Qs.stringify({"type":$("input[name='title1']:checked").val(),"title":this.billTitle,
+                        "billTime":$('#date').val(),"price":this.price,"explains":this.textarea
+                })).then(resp=>{
+                    if (resp.data==="ok"){
+                        layer.confirm('是否继续添加？', {
+                            btn: ['继续','取消'] //按钮
+                        }, ()=>{
+                            this.reset();
+                            layer.close(layer.index);
+                        }, ()=>{
+                            layer.closeAll(); //疯狂模式，关闭所有层
+                        });
+
+                        axios.post('/bill',{}).then(resp=>{
+                            this.billList=resp.data;
+                        })
+
+
+                    }
+
+                })
+
+            },
+
+            //返回按钮
+            returnIndex:function (){
+                layer.closeAll(); //疯狂模式，关闭所有层
+            }
+
+        },
+        filters:{
+            dateformate:function (date){
+                const dt = new Date(date)
+                const y = dt.getFullYear()
+                const m = (dt.getMonth() + 1 + '').padStart(2, '0')
+                const d = (dt.getDate() + '').padStart(2, '0')
+                const hh = (dt.getHours() + '').padStart(2, '0')
+                const mm = (dt.getMinutes() + '').padStart(2, '0')
+                const ss = (dt.getSeconds() + '').padStart(2, '0')
+                return y +"-"+ m+"-"+d+" "+hh+":"+mm+":"+ss
+            }
+        },
+/*        computed:{
+            count:function (){
+                let i=
+                axios.post('/bill',Qs.stringify({"curr": 1 })).then(resp=>{
+                    return resp.data.Total;
+                });
+
+            }
+        }*/
+    });
+</script>
+
+</body>
+</html>
